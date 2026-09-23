@@ -1,0 +1,52 @@
+name: Verificación
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # poppler permite leer el QR desde el PDF rasterizado.
+      - name: Instalar poppler
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - name: Pruebas
+        run: npm test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
+      - run: npm run build
+        env:
+          VITE_BASE_PATH: /citaciones-policiales/
