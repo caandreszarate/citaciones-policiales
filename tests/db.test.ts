@@ -254,6 +254,20 @@ describe('concurrencia', () => {
 });
 
 describe('autorizacion', () => {
+  /** Garantiza que hay una emision registrada, sin depender del orden de las pruebas. */
+  async function unaEmisionRegistrada(): Promise<string> {
+    const { rows } = await db.pool.query<{ id: string }>(
+      "select id from public.issuances where status = 'registrada' limit 1",
+    );
+    if (rows[0]) return rows[0].id;
+    const [lote] = await issue(admin, 'SMII', 1, `clave-autorizacion-${Date.now()}`);
+    const creada = await db.pool.query<{ id: string }>(
+      'select id from public.issuances where batch_id = $1 limit 1',
+      [lote!.batch_id],
+    );
+    return creada.rows[0]!.id;
+  }
+
   it('una cuenta sin autorizar no puede emitir', async () => {
     await expect(issue(noAuth, 'SMII', 1, 'clave-sin-permiso')).rejects.toThrow(/no esta autorizada/i);
   });
@@ -268,6 +282,33 @@ describe('autorizacion', () => {
     await expect(
       db.asUser(null, 'select count(*) from public.issuances'),
     ).rejects.toThrow(/permission denied|denegado/i);
+  });
+
+  it('un visitante anonimo no puede leer los lotes', async () => {
+    await expect(
+      db.asUser(null, 'select count(*) from public.batches'),
+    ).rejects.toThrow(/permission denied|denegado/i);
+  });
+
+  it('un visitante anonimo no puede anular emisiones', async () => {
+    const id = await unaEmisionRegistrada();
+    await expect(
+      db.asUser(null, 'select * from public.annul_citation($1, null)', [id]),
+    ).rejects.toThrow();
+  });
+
+  it('un visitante anonimo no puede ejecutar ninguna funcion salvo la consulta publica', async () => {
+    for (const llamada of [
+      "select * from public.issue_batch('SMII', 1, 'clave-anonima-x')",
+      "select * from public.annul_batch('00000000-0000-0000-0000-000000000000', null)",
+      'select public.is_admin()',
+    ]) {
+      await expect(db.asUser(null, llamada), llamada).rejects.toThrow();
+    }
+    // La unica permitida:
+    await expect(
+      db.asUser(null, "select * from public.verify_issuance('ffffffffffffffffffffffffffffffff')"),
+    ).resolves.toEqual([]);
   });
 
   it('un visitante anonimo no puede leer el contador de las comisarias', async () => {
@@ -302,6 +343,7 @@ describe('autorizacion', () => {
   });
 
   it('una cuenta autorizada si ve el historial', async () => {
+    await unaEmisionRegistrada();
     const rows = await db.asUser(admin, 'select id from public.issuances limit 5');
     expect(rows.length).toBeGreaterThan(0);
   });
