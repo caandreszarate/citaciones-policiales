@@ -20,3 +20,13 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- Perfiles de las cuentas creadas ANTES de existir el disparador.
+--
+-- Sin esto, una cuenta dada de alta en el panel antes de aplicar las migraciones
+-- se queda sin fila en profiles y no puede autorizarse. Es idempotente, asi que
+-- reaplicar la migracion no altera los permisos ya concedidos.
+insert into public.profiles (id, full_name)
+select u.id, nullif(u.raw_user_meta_data ->> 'full_name', '')
+  from auth.users u
+ on conflict (id) do nothing;
