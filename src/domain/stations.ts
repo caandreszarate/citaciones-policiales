@@ -24,6 +24,17 @@ export const STATIONS: readonly Station[] = [
   { code: 'KM5', name: 'Comisaria de Kilometro 5' },
 ] as const;
 
+/**
+ * Comisaria de pruebas. No es una comisaria real: existe para verificar el
+ * sistema sin gastar consecutivos de las cinco anteriores. Se crea en la
+ * migracion 0005 y se retira con `is_active = false`, sin borrar nada.
+ */
+export const TEST_STATION_CODE = 'PRUEBA';
+
+export function isTestStation(code: string): boolean {
+  return code === TEST_STATION_CODE;
+}
+
 const BY_CODE = new Map<string, Station>(STATIONS.map((s) => [s.code, s]));
 
 export function isStationCode(value: string): value is StationCode {

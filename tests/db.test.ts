@@ -39,12 +39,20 @@ afterAll(async () => {
 });
 
 describe('comisarias iniciales', () => {
-  it('siembra las cinco comisarias con contador a cero', async () => {
+  it('siembra las cinco comisarias reales con contador a cero', async () => {
     const rows = await db.pool.query<{ code: string; name: string; last_sequence: string }>(
-      'select code, name, last_sequence from public.stations order by code',
+      "select code, name, last_sequence from public.stations where code <> 'PRUEBA' order by code",
     );
-    expect(rows.rows.map((r) => r.code).sort()).toEqual(['BAN', 'BN', 'KM5', 'SEM', 'SMII']);
+    expect(rows.rows.map((r) => r.code)).toEqual(['BAN', 'BN', 'KM5', 'SEM', 'SMII']);
     expect(rows.rows.every((r) => r.last_sequence === '0')).toBe(true);
+  });
+
+  it('la comisaria de pruebas es la unica anadida sobre las cinco reales', async () => {
+    const rows = await db.pool.query<{ code: string }>('select code from public.stations');
+    const extras = rows.rows
+      .map((r) => r.code)
+      .filter((c) => !['BAN', 'BN', 'KM5', 'SEM', 'SMII'].includes(c));
+    expect(extras).toEqual(['PRUEBA']);
   });
 });
 
@@ -477,5 +485,47 @@ describe('consulta publica', () => {
     const tokens = rows.map((r) => r.verification_token);
     expect(new Set(tokens).size).toBe(tokens.length);
     expect(tokens.every((t) => /^[0-9a-f]{32}$/.test(t))).toBe(true);
+  });
+});
+
+describe('comisaria de pruebas', () => {
+  it('existe, esta claramente identificada y no es una de las cinco reales', async () => {
+    const { rows } = await db.pool.query<{ code: string; name: string; is_active: boolean }>(
+      "select code, name, is_active from public.stations where code = 'PRUEBA'",
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.name.toLowerCase()).toContain('prueba');
+    expect(rows[0]!.is_active).toBe(true);
+  });
+
+  it('tiene su propio contador: emitir pruebas no toca las comisarias reales', async () => {
+    const antes = await db.pool.query<{ code: string; last_sequence: string }>(
+      "select code, last_sequence from public.stations where code <> 'PRUEBA' order by code",
+    );
+    await issue(admin, 'PRUEBA', 3, `clave-pruebas-${Date.now()}`);
+    const despues = await db.pool.query<{ code: string; last_sequence: string }>(
+      "select code, last_sequence from public.stations where code <> 'PRUEBA' order by code",
+    );
+    expect(despues.rows).toEqual(antes.rows);
+  });
+
+  it('al retirarla no se puede emitir, pero se conservan sus emisiones', async () => {
+    await issue(admin, 'PRUEBA', 1, `clave-pruebas-previa-${Date.now()}`);
+    const { rows: previas } = await db.pool.query<{ n: string }>(
+      "select count(*)::text n from public.issuances where station_code = 'PRUEBA'",
+    );
+
+    await db.pool.query("update public.stations set is_active = false where code = 'PRUEBA'");
+
+    await expect(issue(admin, 'PRUEBA', 1, `clave-pruebas-retirada-${Date.now()}`)).rejects.toThrow(
+      /desconocida o inactiva/i,
+    );
+
+    const { rows: despues } = await db.pool.query<{ n: string }>(
+      "select count(*)::text n from public.issuances where station_code = 'PRUEBA'",
+    );
+    expect(despues[0]!.n).toBe(previas[0]!.n); // nada se borra
+
+    await db.pool.query("update public.stations set is_active = true where code = 'PRUEBA'");
   });
 });

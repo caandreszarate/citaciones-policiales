@@ -22,6 +22,34 @@ async function callRpc<T>(
 
 export type IssuanceStatus = 'registrada' | 'anulada';
 
+export interface StationRow {
+  readonly code: string;
+  readonly name: string;
+  readonly isActive: boolean;
+}
+
+/**
+ * Catalogo de comisarias segun el servidor.
+ *
+ * Se lee de la base de datos en lugar de usar solo la lista del codigo, para que
+ * activar o retirar una comisaria (por ejemplo la de pruebas) no exija desplegar
+ * de nuevo. `src/domain/stations.ts` sigue siendo la referencia de los nombres.
+ */
+export async function listStations(): Promise<StationRow[]> {
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from('stations')
+    .select('code, name, is_active')
+    .eq('is_active', true)
+    .order('code', { ascending: true });
+  if (error) throw new Error(translateError(error.message));
+  return (data ?? []).map((r) => ({
+    code: r.code as string,
+    name: r.name as string,
+    isActive: r.is_active as boolean,
+  }));
+}
+
 /** Limite tecnico POR OPERACION del servidor (public.max_batch_quantity()). */
 export const MAX_BATCH_QUANTITY = 500;
 

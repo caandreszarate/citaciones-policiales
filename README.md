@@ -58,6 +58,7 @@ En **SQL Editor**, ejecute en orden los archivos de `supabase/migrations/`:
 | `0002_seed_stations.sql` | Las cinco comisarías iniciales |
 | `0003_functions.sql` | `issue_batch`, `annul_citation`, `annul_batch`, `verify_issuance`, permisos y RLS |
 | `0004_profile_trigger.sql` | Crea el perfil al dar de alta una cuenta |
+| `0005_comisaria_pruebas.sql` | Comisaría `PRUEBA`, para verificar sin gastar consecutivos reales |
 
 Con la CLI de Supabase:
 
@@ -141,6 +142,22 @@ pública pasa a mostrar «Emisión anulada».
 Las pruebas de base de datos aplican las **migraciones reales**. Usan
 `DATABASE_URL` si está definida; si no, levantan un PostgreSQL local con
 `scripts/test-db.sh`. Todos los datos son ficticios.
+
+## Pruebas sobre el sistema publicado
+
+Use la comisaría **`PRUEBA`** («PRUEBAS - no usar para citaciones reales»). Tiene
+su propio contador, así que las cinco comisarías reales se quedan en cero hasta
+la primera emisión de verdad.
+
+Cuando el sistema entre en producción, retírela:
+
+```sql
+update public.stations set is_active = false where code = 'PRUEBA';
+```
+
+No borre emisiones de prueba ni reinicie contadores para ocultarlas: forman parte
+del registro, y el sistema está construido justamente para que los consecutivos
+no retrocedan nunca.
 
 ## Copia de seguridad y recuperación
 

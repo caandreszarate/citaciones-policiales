@@ -1,7 +1,7 @@
-import { useCallback, useRef, useState, type FormEvent } from 'react';
-import { STATIONS } from '../domain/stations.ts';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { STATIONS, isTestStation, stationName } from '../domain/stations.ts';
 import { formatMalaboDateTime } from '../domain/registration.ts';
-import { MAX_BATCH_QUANTITY, type Batch } from '../lib/api.ts';
+import { MAX_BATCH_QUANTITY, listStations, type Batch, type StationRow } from '../lib/api.ts';
 import {
   exportFileName,
   issueCitations,
@@ -31,8 +31,19 @@ interface EmisionActual {
   readonly pages: CitationPdfInput[];
 }
 
+/** Catalogo por defecto mientras responde el servidor. */
+const CATALOGO_INICIAL: StationRow[] = STATIONS.map((s) => ({
+  code: s.code,
+  name: s.name,
+  isActive: true,
+}));
+
 export function GenerarPage() {
   const [stationCode, setStationCode] = useState<string>(STATIONS[0]!.code);
+  const [comisarias, setComisarias] = useState<{ clave: number; lista: StationRow[] }>({
+    clave: 0,
+    lista: CATALOGO_INICIAL,
+  });
   const [quantity, setQuantity] = useState('1');
   const [emitiendo, setEmitiendo] = useState(false);
   const [progreso, setProgreso] = useState<string | null>(null);
@@ -52,6 +63,22 @@ export function GenerarPage() {
    * lotes en vez de emitir otros nuevos.
    */
   const claveIntento = useRef<string | null>(null);
+
+  // El catalogo lo manda el servidor: asi una comisaria retirada desaparece del
+  // selector sin necesidad de desplegar.
+  useEffect(() => {
+    let activo = true;
+    listStations()
+      .then((lista) => {
+        if (activo && lista.length > 0) setComisarias({ clave: 1, lista });
+      })
+      .catch(() => {
+        // Si falla, se sigue con la lista del codigo: no es motivo para bloquear.
+      });
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   const cantidad = Number.parseInt(quantity, 10);
   const cantidadValida = Number.isInteger(cantidad) && cantidad >= 1;
@@ -165,9 +192,10 @@ export function GenerarPage() {
                 onChange={(e) => setStationCode(e.target.value)}
                 disabled={emitiendo}
               >
-                {STATIONS.map((s) => (
+                {comisarias.lista.map((s) => (
                   <option key={s.code} value={s.code}>
-                    {s.name} ({s.code})
+                    {isTestStation(s.code) ? '⚠ ' : ''}
+                    {stationName(s.code, s.name)} ({s.code})
                   </option>
                 ))}
               </select>
@@ -194,6 +222,16 @@ export function GenerarPage() {
               </p>
             </div>
           </div>
+
+          {isTestStation(stationCode) ? (
+            <div className="aviso atencion">
+              <p>
+                <strong>Comisaria de pruebas.</strong> Las citaciones que emita aqui NO son
+                validas. Sirven para comprobar el sistema sin gastar consecutivos de las
+                comisarias reales.
+              </p>
+            </div>
+          ) : null}
 
           <div className="acciones">
             <button type="submit" disabled={emitiendo || !cantidadValida}>

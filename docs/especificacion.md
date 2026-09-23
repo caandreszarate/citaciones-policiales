@@ -88,6 +88,29 @@ uno, no puede cambiarse, porque forma parte de códigos ya impresos.
 
 Fuente única: `src/domain/stations.ts` y `supabase/migrations/0002_seed_stations.sql`.
 
+### Comisaría de pruebas
+
+`0005_comisaria_pruebas.sql` añade una sexta entrada, `PRUEBA`
+(«PRUEBAS - no usar para citaciones reales»), para poder verificar el sistema de
+extremo a extremo **sin gastar consecutivos de las cinco comisarías reales**,
+cuyos contadores no se reinician nunca.
+
+Se distingue en el selector (con aviso), en el historial y en la consulta
+pública: quien escanee un QR de prueba ve de qué se trata.
+
+Para retirarla al entrar en producción:
+
+```sql
+update public.stations set is_active = false where code = 'PRUEBA';
+```
+
+Desactivarla impide emitir más citaciones con ella y la retira del selector, pero
+**conserva** las ya emitidas y su contador. Nunca se borra: ocultar emisiones
+falsearía el historial.
+
+El selector lee el catálogo de la base de datos (`listStations()`), de modo que
+retirarla no exige desplegar de nuevo.
+
 ## 5. Generación por lotes
 
 - Una citación **por página**, en PDF y en Word.
