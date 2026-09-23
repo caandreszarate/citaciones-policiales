@@ -50,7 +50,16 @@ enable_anonymous_sign_ins = false
 enable_manual_linking = false
 
 [auth.email]
-enable_signup = false
+# CUIDADO con el nombre: `[auth.email] enable_signup` NO significa "permitir
+# altas por correo". La CLI lo traduce a `external_email_enabled`, que es el
+# interruptor "Enable email provider" del panel. Ponerlo a false apaga el inicio
+# de sesion por correo Y los correos de recuperacion de contrasena.
+#
+# Debe quedarse en TRUE. Quien impide el registro publico es `[auth] enable_signup
+# = false` de la seccion anterior, que se traduce a `disable_signup = true` y
+# bloquea cualquier alta, venga por donde venga.
+enable_signup = true
+
 # No hace falta confirmar por correo: las cuentas las crea la administracion,
 # que ya marca "Auto Confirm User".
 enable_confirmations = false
