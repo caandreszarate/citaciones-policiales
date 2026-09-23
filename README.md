@@ -84,6 +84,30 @@ update public.profiles
 `is_admin` arranca en `false` a propósito: crear la cuenta no basta, hay que
 autorizarla explícitamente.
 
+### Añadir más cuentas administradoras
+
+Se puede **invitar** en lugar de fijar una contraseña, para que el titular elija
+la suya y nadie más la conozca:
+
+1. **Authentication → Users → Add user → Send invitation**, con la dirección.
+2. Autorícela con el `update` de arriba.
+
+La persona recibe un correo, sigue el enlace y aterriza en la pantalla
+**«Establecer su contraseña»** de la aplicación publicada. El enlace caduca y
+sirve una sola vez.
+
+> Invitar **no** habilita el registro público: `disable_signup` sigue activo y un
+> intento de alta responde `422 Signups not allowed for this instance`.
+
+### Si alguien olvida su contraseña
+
+En la pantalla de acceso, **«¿Olvidó su contraseña?»**. La respuesta es la misma
+exista o no la cuenta, para no revelar qué direcciones están registradas.
+
+> El correo integrado de Supabase está limitado a **2 mensajes por hora** y puede
+> acabar en la carpeta de correo no deseado. Para uso real conviene configurar un
+> SMTP propio en **Project Settings → Authentication → SMTP Settings**.
+
 ### 4. Publicar en GitHub Pages
 
 1. **Settings → Pages → Source: GitHub Actions**.

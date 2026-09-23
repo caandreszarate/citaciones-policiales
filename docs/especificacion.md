@@ -210,6 +210,46 @@ si se anula, fecha, usuario y motivo.
   políticas de `insert`/`update`/`delete`, así que RLS las deniega todas. El
   único camino es `issue_batch()`.
 
+## 9 bis. Contraseñas
+
+No hay registro público (`disable_signup`), pero sí dos caminos para que una
+persona establezca su contraseña **sin que nadie más la conozca**:
+
+- **Invitación** (`type=invite`), al dar de alta una cuenta.
+- **Recuperación** (`type=recovery`), desde «¿Olvidó su contraseña?».
+
+Ambos acaban en la misma pantalla, que cambia el texto según el caso.
+
+### El fragmento de la URL
+
+Supabase devuelve al usuario con los datos en el **fragmento**:
+
+```
+https://…/citaciones-policiales/#access_token=…&refresh_token=…&type=invite
+```
+
+Eso choca de frente con el enrutado por hash: `#access_token=…` ocuparía el sitio
+de `#/ruta`. Por eso el cliente se crea con `detectSessionInUrl: false` y la
+lectura se hace a mano en `main.tsx`, **antes** de montar el router: se extraen
+los datos, se limpia la URL con `replaceState` —para que los tokens no queden en
+la barra de direcciones ni en el historial— y se encamina a
+`#/nueva-contrasena`.
+
+Se admite también el flujo PKCE (`?code=…`), de modo que el enlace funciona
+aunque se abra en otro navegador o en otro dispositivo.
+
+Se distinguen: enlace **caducado**, **ya usado** y **ausente**.
+
+### Cuidado con `[auth.email] enable_signup`
+
+En `supabase/config.toml` ese ajuste **no** significa «permitir altas por
+correo»: la CLI lo traduce a `external_email_enabled`, el interruptor «Enable
+email provider». Ponerlo a `false` deja el proyecto sin inicio de sesión por
+correo y sin correos de recuperación. Debe quedarse en `true`.
+
+Quien impide el registro público es `[auth] enable_signup = false`, que se
+traduce a `disable_signup = true`.
+
 ## 10. Arquitectura
 
 - **TypeScript estricto**, React 19, Vite 8.
