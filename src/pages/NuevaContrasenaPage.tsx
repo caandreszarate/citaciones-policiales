@@ -2,7 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.ts';
 import { checkPassword, PASSWORD_RULES } from '../domain/password.ts';
-import { describeRecoveryError, takeRecoveryEntry, type RecoveryEntry } from '../lib/recovery.ts';
+import {
+  describeRecoveryError,
+  takeRecoveryEntry,
+  type RecoveryEntry,
+  type RecoveryPurpose,
+} from '../lib/recovery.ts';
 
 /**
  * Establecer una contrasena nueva tras seguir el enlace del correo.
@@ -18,9 +23,30 @@ type Estado =
   | { fase: 'guardando' }
   | { fase: 'hecho' };
 
+/** Mismo flujo para recuperar y para estrenar cuenta; cambia como se explica. */
+const TEXTOS: Record<RecoveryPurpose, { titulo: string; entrada: string; exito: string }> = {
+  recovery: {
+    titulo: 'Nueva contraseña',
+    entrada: 'Elija una contraseña nueva para su cuenta.',
+    exito: 'Contraseña actualizada. Ya puede usarla para entrar.',
+  },
+  invite: {
+    titulo: 'Establecer su contraseña',
+    entrada:
+      'Le han dado de alta en el sistema. Elija la contraseña con la que entrará a partir de ahora.',
+    exito: 'Contraseña establecida. Su cuenta ya está lista.',
+  },
+  desconocido: {
+    titulo: 'Nueva contraseña',
+    entrada: 'Elija la contraseña con la que entrará al sistema.',
+    exito: 'Contraseña guardada. Ya puede usarla para entrar.',
+  },
+};
+
 export function NuevaContrasenaPage() {
   const navigate = useNavigate();
   const [estado, setEstado] = useState<Estado>({ fase: 'preparando' });
+  const [proposito, setProposito] = useState<RecoveryPurpose>('desconocido');
   const [password, setPassword] = useState('');
   const [repetida, setRepetida] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +69,8 @@ export function NuevaContrasenaPage() {
           motivo: describeRecoveryError(entrada.code, entrada.description),
         };
       }
+
+      if (entrada) setProposito(entrada.purpose);
 
       if (entrada?.kind === 'tokens') {
         const { error: fallo } = await supabase.auth.setSession({
@@ -117,7 +145,7 @@ export function NuevaContrasenaPage() {
     return (
       <div className="centrado">
         <section className="tarjeta">
-          <h2>Nueva contraseña</h2>
+          <h2>{TEXTOS[proposito].titulo}</h2>
           <p aria-live="polite">Comprobando el enlace...</p>
         </section>
       </div>
@@ -128,7 +156,7 @@ export function NuevaContrasenaPage() {
     return (
       <div className="centrado">
         <section className="tarjeta">
-          <h2>Nueva contraseña</h2>
+          <h2>{TEXTOS[proposito].titulo}</h2>
           <div className="aviso atencion" role="alert">
             <p>
               <strong>Enlace no válido.</strong> {estado.motivo}
@@ -149,10 +177,10 @@ export function NuevaContrasenaPage() {
     return (
       <div className="centrado">
         <section className="tarjeta">
-          <h2>Nueva contraseña</h2>
+          <h2>{TEXTOS[proposito].titulo}</h2>
           <div className="aviso exito" role="status">
             <p>
-              <strong>Contraseña actualizada.</strong> Ya puede usarla para entrar.
+              <strong>{TEXTOS[proposito].exito}</strong>
             </p>
           </div>
           <div className="acciones">
@@ -170,11 +198,14 @@ export function NuevaContrasenaPage() {
   return (
     <div className="centrado">
       <section className="tarjeta">
-        <h2>Nueva contraseña</h2>
+        <h2>{TEXTOS[proposito].titulo}</h2>
+        <p className="ayuda">{TEXTOS[proposito].entrada}</p>
 
         <form onSubmit={onSubmit} noValidate>
           <div className="campo">
-            <label htmlFor="password-nueva">Contraseña nueva</label>
+            <label htmlFor="password-nueva">
+              {proposito === 'invite' ? 'Contraseña' : 'Contraseña nueva'}
+            </label>
             <input
               id="password-nueva"
               type="password"

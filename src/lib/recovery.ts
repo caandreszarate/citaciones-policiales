@@ -20,10 +20,27 @@
  * navegador o en otro dispositivo (donde PKCE no encontraria su verificador).
  */
 
+/**
+ * `type` lo pone Supabase segun el correo: `recovery` cuando alguien ha olvidado
+ * su contrasena, `invite` cuando se da de alta a una cuenta nueva. El flujo es el
+ * mismo; solo cambia como se le habla a la persona.
+ */
+export type RecoveryPurpose = 'recovery' | 'invite' | 'desconocido';
+
 export type RecoveryEntry =
-  | { readonly kind: 'tokens'; readonly accessToken: string; readonly refreshToken: string }
-  | { readonly kind: 'code'; readonly code: string }
+  | {
+      readonly kind: 'tokens';
+      readonly accessToken: string;
+      readonly refreshToken: string;
+      readonly purpose: RecoveryPurpose;
+    }
+  | { readonly kind: 'code'; readonly code: string; readonly purpose: RecoveryPurpose }
   | { readonly kind: 'error'; readonly code: string; readonly description: string };
+
+function readPurpose(value: string | null): RecoveryPurpose {
+  if (value === 'recovery' || value === 'invite') return value;
+  return 'desconocido';
+}
 
 /** Ruta interna donde se establece la nueva contrasena. */
 export const RECOVERY_ROUTE = '/nueva-contrasena';
@@ -50,14 +67,16 @@ export function readRecoveryParams(href: string): RecoveryEntry | null {
     };
   }
 
+  const purpose = readPurpose(hashParams.get('type') ?? url.searchParams.get('type'));
+
   const accessToken = hashParams.get('access_token');
   const refreshToken = hashParams.get('refresh_token');
   if (accessToken && refreshToken) {
-    return { kind: 'tokens', accessToken, refreshToken };
+    return { kind: 'tokens', accessToken, refreshToken, purpose };
   }
 
   const code = url.searchParams.get('code');
-  if (code) return { kind: 'code', code };
+  if (code) return { kind: 'code', code, purpose };
 
   return null;
 }
@@ -84,6 +103,20 @@ export function captureRecoveryFromUrl(): RecoveryEntry | null {
   window.history.replaceState(null, '', limpia);
 
   return entry;
+}
+
+/**
+ * Un enlace pegado en la barra de direcciones con la aplicacion ya abierta solo
+ * cambia el fragmento, y eso NO recarga la pagina: la captura de arranque no
+ * llegaria a ejecutarse y el router interpretaria "#access_token=..." como una
+ * ruta desconocida. Al detectarlo se fuerza una recarga, tras la cual la captura
+ * si se ejecuta. No hay bucle: despues de capturar, la URL ya no trae parametros.
+ */
+export function watchRecoveryInUrl(): void {
+  if (typeof window === 'undefined') return;
+  window.addEventListener('hashchange', () => {
+    if (readRecoveryParams(window.location.href)) window.location.reload();
+  });
 }
 
 /** Devuelve lo capturado al arrancar. Se consume una sola vez. */

@@ -14,13 +14,19 @@ describe('lectura del enlace de recuperacion', () => {
     const entrada = readRecoveryParams(
       `${BASE}#access_token=abc.def.ghi&refresh_token=rrr&expires_in=3600&token_type=bearer&type=recovery`,
     );
-    expect(entrada).toEqual({ kind: 'tokens', accessToken: 'abc.def.ghi', refreshToken: 'rrr' });
+    expect(entrada).toEqual({
+      kind: 'tokens',
+      accessToken: 'abc.def.ghi',
+      refreshToken: 'rrr',
+      purpose: 'recovery',
+    });
   });
 
   it('lee el flujo PKCE, que llega en la cadena de consulta', () => {
     expect(readRecoveryParams(`${BASE}?code=un-codigo-de-intercambio`)).toEqual({
       kind: 'code',
       code: 'un-codigo-de-intercambio',
+      purpose: 'desconocido',
     });
   });
 
@@ -53,6 +59,18 @@ describe('lectura del enlace de recuperacion', () => {
   it('no acepta un retorno a medias', () => {
     // Sin refresh_token no se puede establecer sesion.
     expect(readRecoveryParams(`${BASE}#access_token=solo-el-de-acceso&type=recovery`)).toBeNull();
+  });
+
+  it('distingue una invitacion de una recuperacion', () => {
+    const invitacion = readRecoveryParams(`${BASE}#access_token=a&refresh_token=b&type=invite`);
+    expect(invitacion).toMatchObject({ kind: 'tokens', purpose: 'invite' });
+
+    const recuperacion = readRecoveryParams(`${BASE}#access_token=a&refresh_token=b&type=recovery`);
+    expect(recuperacion).toMatchObject({ kind: 'tokens', purpose: 'recovery' });
+
+    // Sin `type` el flujo sigue funcionando, solo cambia como se explica.
+    const sinTipo = readRecoveryParams(`${BASE}#access_token=a&refresh_token=b`);
+    expect(sinTipo).toMatchObject({ kind: 'tokens', purpose: 'desconocido' });
   });
 
   it('funciona bajo la subruta de GitHub Pages', () => {
