@@ -27,9 +27,16 @@ enabled = true
 
 # Aplicacion publicada en GitHub Pages.
 site_url = "https://caandreszarate.github.io/citaciones-policiales"
+# El retorno de la recuperacion de contrasena llega a la raiz de la aplicacion,
+# con los datos en el fragmento o en la cadena de consulta. Se admiten las formas
+# con y sin barra final, y el comodin para no depender de como los componga
+# GoTrue.
 additional_redirect_urls = [
   "https://caandreszarate.github.io/citaciones-policiales",
+  "https://caandreszarate.github.io/citaciones-policiales/",
+  "https://caandreszarate.github.io/citaciones-policiales/**",
   "http://localhost:5173",
+  "http://localhost:5173/**",
 ]
 
 jwt_expiry = 3600

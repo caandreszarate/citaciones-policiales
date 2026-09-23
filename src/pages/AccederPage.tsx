@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../features/auth.tsx';
 
 /** Inicio de sesion. No hay registro publico: las cuentas las crea la administracion. */
@@ -63,8 +64,12 @@ export function AccederPage() {
             {enviando ? 'Comprobando...' : 'Entrar'}
           </button>
         </form>
-        <p className="ayuda" style={{ marginTop: '1rem' }}>
-          Las cuentas las crea la administracion del sistema. No hay registro publico.
+
+        <p style={{ marginTop: '1rem', marginBottom: 0 }}>
+          <Link to="/recuperar">¿Olvidó su contraseña?</Link>
+        </p>
+        <p className="ayuda" style={{ marginTop: '0.6rem' }}>
+          Las cuentas las crea la administración del sistema. No hay registro público.
         </p>
       </section>
     </div>

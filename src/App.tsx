@@ -3,6 +3,8 @@ import { HashRouter, NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './features/auth.tsx';
 import { config } from './lib/config.ts';
 import { AccederPage } from './pages/AccederPage.tsx';
+import { RecuperarPage } from './pages/RecuperarPage.tsx';
+import { NuevaContrasenaPage } from './pages/NuevaContrasenaPage.tsx';
 import { VerificarPage } from './pages/VerificarPage.tsx';
 
 // Las pantallas de administracion arrastran los generadores de PDF y Word. Se
@@ -45,6 +47,12 @@ export function App() {
             {/* Publica: es la que abre el QR impreso. */}
             <Route path="/verificar/:token" element={<VerificarPage />} />
             <Route path="/acceder" element={<SoloInvitados><AccederPage /></SoloInvitados>} />
+
+            {/* Recuperacion de contrasena. Accesibles sin sesion: quien llega
+                desde el correo no la tiene, y quien sigue el enlace SI acaba con
+                una sesion de recuperacion, asi que no pueden ir tras SoloInvitados. */}
+            <Route path="/recuperar" element={<RecuperarPage />} />
+            <Route path="/nueva-contrasena" element={<NuevaContrasenaPage />} />
             <Route path="/" element={<SoloAdministracion><GenerarPage /></SoloAdministracion>} />
             <Route
               path="/historial"
