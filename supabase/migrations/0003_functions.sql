@@ -67,7 +67,9 @@ returns table (
 language plpgsql
 volatile
 security definer
-set search_path = public, pg_catalog
+-- `extensions` es necesario: en Supabase pgcrypto (gen_random_bytes) vive ahi,
+-- no en public. Omitirlo hace que la funcion falle solo en el proyecto real.
+set search_path = public, extensions, pg_catalog
 as $$
 declare
   v_user uuid := auth.uid();

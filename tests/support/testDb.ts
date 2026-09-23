@@ -16,6 +16,12 @@ const MIGRATIONS_DIR = join(import.meta.dirname, '..', '..', 'supabase', 'migrat
 
 /** Reemplazo de prueba del esquema `auth` de Supabase. */
 const AUTH_STUB = `
+-- Supabase instala pgcrypto en el esquema extensions, NO en public. Se
+-- reproduce aqui para que las pruebas detecten cualquier funcion cuyo
+-- search_path no lo incluya, en lugar de descubrirlo en produccion.
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+
 create schema if not exists auth;
 
 create table if not exists auth.users (
@@ -25,6 +31,8 @@ create table if not exists auth.users (
 );
 
 -- auth.uid() de Supabase lee el JWT; aqui leemos una variable de sesion.
+-- Equivalente al auth.uid() de Supabase, que lee el JWT. Aqui leemos una
+-- variable de sesion para poder cambiar de identidad en las pruebas.
 create or replace function auth.uid() returns uuid
 language sql stable as $$
   select nullif(current_setting('test.user_id', true), '')::uuid
@@ -68,7 +76,6 @@ export async function createTestDb(name: string): Promise<TestDb> {
 
   const setup = await pool.connect();
   try {
-    await setup.query('create extension if not exists pgcrypto');
     await setup.query(AUTH_STUB);
     for (const file of readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).sort()) {
       await setup.query(readFileSync(join(MIGRATIONS_DIR, file), 'utf8'));

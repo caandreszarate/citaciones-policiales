@@ -97,7 +97,7 @@ describe('contadores', () => {
       returns table (batch_id uuid, station_code text, station_name text, quantity integer,
                      first_sequence bigint, last_sequence bigint, year integer,
                      created_at timestamptz, reused boolean)
-      language sql volatile security definer set search_path = public, pg_catalog as $fn$
+      language sql volatile security definer set search_path = public, extensions, pg_catalog as $fn$
         select * from public.issue_batch_real(p_station_code, p_quantity, p_idempotency_key)
       $fn$;
       grant execute on function public.issue_batch(text, integer, text) to authenticated;
@@ -113,7 +113,7 @@ describe('contadores', () => {
        returns table (batch_id uuid, station_code text, station_name text, quantity integer,
                       first_sequence bigint, last_sequence bigint, year integer,
                       created_at timestamptz, reused boolean)
-       language plpgsql volatile security definer set search_path = public, pg_catalog as $fn$
+       language plpgsql volatile security definer set search_path = public, extensions, pg_catalog as $fn$
        declare v_last bigint; v_first bigint; v_year integer;
                v_now timestamptz := public.now_override(); v_batch_id uuid;
        begin

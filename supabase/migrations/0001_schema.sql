@@ -8,7 +8,10 @@
 --     blanco y se rellena a mano.
 -- =============================================================================
 
-create extension if not exists pgcrypto;
+-- Supabase ya trae pgcrypto en el esquema `extensions`. Se declara igualmente
+-- para que un PostgreSQL limpio quede en el mismo estado.
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
 
 -- -----------------------------------------------------------------------------
 -- Perfiles: quien puede emitir. No hay registro publico de usuarios; las cuentas
